@@ -270,7 +270,8 @@ int rr_sched(void)
                                 }
                         /* LAB 4 TODO BEGIN (exercise 4) */
                         /* Refill budget for current running thread (old) and enqueue the current thread.*/
-
+                                rr_sched_refill_budget(old, DEFAULT_BUDGET);
+                                BUG_ON(rr_sched_enqueue(old) != 0);
                         /* LAB 4 TODO END (exercise 4) */
 
                         } else if (!thread_is_ts_blocking(old)
