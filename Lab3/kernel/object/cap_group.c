@@ -348,7 +348,17 @@ cap_t sys_create_cap_group(unsigned long cap_group_args_p)
         /* cap current cap_group */
         /* LAB 3 TODO BEGIN */
         /* Allocate a new cap_group object */
+#ifdef CHCORE_OPENTRUSTEE
+        if (check_user_addr_range((vaddr_t)args.puuid,
+                sizeof(TEE_UUID)) != 0)
+                return -EINVAL;
+#endif /* CHCORE_OPENTRUSTEE */
 
+        if (check_user_addr_range((vaddr_t)args.name, (size_t)args.name_len) != 0)
+                return -EINVAL;
+
+        /* cap current cap_group */
+        new_cap_group = obj_alloc(TYPE_CAP_GROUP, sizeof(*new_cap_group));
         /* LAB 3 TODO END */
         if (!new_cap_group) {
                 r = -ENOMEM;
@@ -356,6 +366,17 @@ cap_t sys_create_cap_group(unsigned long cap_group_args_p)
         }
         /* LAB 3 TODO BEGIN */
         /* initialize cap group from user*/
+        cap_group_init(new_cap_group, BASE_OBJECT_NUM, args.badge);
+	new_cap_group->pid = args.pid;
+#ifdef CHCORE_OPENTRUSTEE
+        new_cap_group->heap_size_limit = args.heap_size;
+	/* pid used in OH-TEE */
+        if (args.puuid) {
+                copy_from_user(&new_cap_group->uuid, (void *)args.puuid, sizeof(TEE_UUID));
+        } else {
+                memset(&new_cap_group->uuid, 0, sizeof(TEE_UUID));
+        }
+#endif /* CHCORE_OPENTRUSTEE */
 
         /* LAB 3 TODO END */
 
@@ -380,7 +401,7 @@ cap_t sys_create_cap_group(unsigned long cap_group_args_p)
 
         /* 2st cap is vmspace */
         /* LAB 3 TODO BEGIN */
-
+        vmspace = obj_alloc(TYPE_VMSPACE, sizeof(*vmspace));
         /* LAB 3 TODO END */
 
         if (!vmspace) {
@@ -420,20 +441,30 @@ struct cap_group *create_root_cap_group(char *name, size_t name_len)
         /* LAB 3 TODO BEGIN */
         UNUSED(vmspace);
         UNUSED(cap_group);
-
+        cap_group = obj_alloc(TYPE_CAP_GROUP, sizeof(*cap_group));
+        if (!cap_group) {
+                kwarn("failed alloc cap_group in %s\n", __func__);
+                return NULL;
+        }
         /* LAB 3 TODO END */
         BUG_ON(!cap_group);
 
         /* LAB 3 TODO BEGIN */
         /* initialize cap group with common, use ROOT_CAP_GROUP_BADGE */
-
+        cap_group_init(cap_group,
+                       BASE_OBJECT_NUM,
+                       /* Fixed badge */ ROOT_CAP_GROUP_BADGE);
         /* LAB 3 TODO END */
         slot_id = cap_alloc(cap_group, cap_group);
 
         BUG_ON(slot_id != CAP_GROUP_OBJ_ID);
 
         /* LAB 3 TODO BEGIN */
-
+        vmspace = obj_alloc(TYPE_VMSPACE, sizeof(*vmspace));
+        if (!vmspace) {
+                kwarn("failed alloc vmspace in %s\n", __func__);
+                return NULL;
+        }
         /* LAB 3 TODO END */
         BUG_ON(!vmspace);
 
@@ -441,7 +472,7 @@ struct cap_group *create_root_cap_group(char *name, size_t name_len)
         vmspace_init(vmspace, ROOT_PROCESS_PCID);
 
         /* LAB 3 TODO BEGIN */
-
+        slot_id = cap_alloc(cap_group, vmspace);
         /* LAB 3 TODO END */
 
         BUG_ON(slot_id != VMSPACE_OBJ_ID);
