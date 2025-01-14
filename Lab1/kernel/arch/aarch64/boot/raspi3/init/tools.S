@@ -276,6 +276,9 @@ BEGIN_FUNC(el1_mmu_activate)
 	/* Enable MMU */
 	/* LAB 1 TODO 4 BEGIN */
 	/* BLANK BEGIN */
+
+	orr     x8, x8,
+
 	/* BLANK END */
 	/* LAB 1 TODO 4 END */
 	/* Disable alignment checking */
