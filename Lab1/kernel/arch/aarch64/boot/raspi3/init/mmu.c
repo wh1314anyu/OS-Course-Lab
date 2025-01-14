@@ -89,6 +89,63 @@ void init_kernel_pt(void)
         /* Step 1: set L0 and L1 page table entry */
         /* BLANK BEGIN */
         /* BLANK END */
+        vaddr = KERNEL_VADDR + PHYSMEM_START;
+        boot_ttbr1_l0[GET_L0_INDEX(vaddr)] = ((u64)boot_ttbr1_l1) | IS_TABLE
+                                             | IS_VALID;
+        boot_ttbr1_l1[GET_L1_INDEX(vaddr)] = ((u64)boot_ttbr1_l2) | IS_TABLE
+                                             | IS_VALID;
+
+        boot_ttbr1_l2[GET_L2_INDEX(vaddr)] = ((u64)boot_ttbr1_l3) | IS_TABLE
+                                             | IS_VALID;
+
+        BUG_ON((u64)(&_text_end) >= KERNEL_VADDR + SIZE_2M);
+        /* _text_start & _text_end should be 4K aligned*/
+        BUG_ON((u64)(&_text_start) % SIZE_4K != 0 || (u64)(&_text_end) % SIZE_4K != 0);
+
+        for (; vaddr < KERNEL_VADDR + SIZE_2M; vaddr += SIZE_4K) {
+                boot_ttbr1_l3[GET_L3_INDEX(vaddr)] =
+                        (vaddr - KERNEL_VADDR)
+                        | UXN /* Unprivileged execute never */
+                        | PXN /* Priviledged execute never*/
+                        | ACCESSED /* Set access flag */
+                        | INNER_SHARABLE /* Sharebility */
+                        | NORMAL_MEMORY /* Normal memory */
+                        | IS_PTE
+                        | IS_VALID;
+                /* (KERNEL_VADDR + TEXT_START ~ KERNEL_VADDR + TEXT_END) was mapped to 
+                * physical address (PHY_START ~ PHY_START + TEXT_END) with R/X
+                */
+                if (vaddr >= (u64)(&_text_start) && vaddr < (u64)(&_text_end)) {
+                        boot_ttbr1_l3[GET_L3_INDEX(vaddr)] &= ~PXN;
+                        boot_ttbr1_l3[GET_L3_INDEX(vaddr)] |= RDONLY_S; /* Read Only*/
+                }
+        }
+
+        for (; vaddr < KERNEL_VADDR + PERIPHERAL_BASE; vaddr += SIZE_2M) {
+                /* No NG bit here since the kernel mappings are shared */
+                boot_ttbr1_l2[GET_L2_INDEX(vaddr)] =
+                        (vaddr - KERNEL_VADDR) /* high mem, va = kbase + pa */
+                        | UXN /* Unprivileged execute never */
+                        | PXN /* Priviledged execute never*/
+                        | ACCESSED /* Set access flag */
+                        | INNER_SHARABLE /* Sharebility */
+                        | NORMAL_MEMORY /* Normal memory */
+                        | IS_VALID;
+        }
+
+        /* Peripheral memory: PERIPHERAL_BASE ~ PHYSMEM_END */
+        /* Map with 2M granularity */
+        for (vaddr = KERNEL_VADDR + PERIPHERAL_BASE;
+             vaddr < KERNEL_VADDR + PHYSMEM_END;
+             vaddr += SIZE_2M) {
+                boot_ttbr1_l2[GET_L2_INDEX(vaddr)] =
+                        (vaddr - KERNEL_VADDR) /* high mem, va = kbase + pa */
+                        | UXN /* Unprivileged execute never */
+                        | PXN /* Priviledged execute never*/
+                        | ACCESSED /* Set access flag */
+                        | DEVICE_MEMORY /* Device memory */
+                        | IS_VALID;
+        }
 
         /* Step 2: map PHYSMEM_START ~ PERIPHERAL_BASE with 2MB granularity */
         /* BLANK BEGIN */
