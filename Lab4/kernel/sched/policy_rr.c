@@ -293,7 +293,11 @@ int rr_sched_init(void)
 {
         /* LAB 4 TODO BEGIN (exercise 1) */
         /* Initial the ready queues (rr_ready_queue_meta) for each CPU core */
-        
+        for (int i = 0; i < PLAT_CPU_NUM; i++) {
+        init_list_head(&(rr_ready_queue_meta[i].queue_head));
+        rr_ready_queue_meta[i].queue_len = 0;
+        lock_init(&rr_ready_queue_meta[i].queue_lock);
+        }
         /* LAB 4 TODO END (exercise 1) */
         int i = 0;
 
