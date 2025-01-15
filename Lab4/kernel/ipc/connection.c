@@ -950,9 +950,9 @@ int sys_ipc_register_cb_return(cap_t server_handler_thread_cap,
         }
         obj_put(ipc_server_handler_thread);
         /* Initialize the ipc configuration for the handler_thread (end) */
-        conn->shm.server_shm_uaddr = server_shm_addr;
         /* LAB 4 TODO BEGIN (exercise 7) */
         /* Complete the server_shm_uaddr field of shm, replace xxx with the actual value */
+        conn->shm.server_shm_uaddr = server_shm_addr;
         // conn->shm.server_shm_uaddr = xxx;
         /* LAB 4 TODO END (exercise 7) */
         /* Fill the server information in the IPC connection. */
